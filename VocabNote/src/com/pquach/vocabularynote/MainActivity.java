@@ -35,6 +35,7 @@ public class MainActivity extends  ActionBarActivity {
 	static final int SORT_BY_ID = 1;
 	static final int ASCENDING = 0;
 	static final int DESCENDING = 1;
+	private WordDataSource mWordDS;
 	ListView mListview;
 	TextView mTv_instruct_msg;
 	ArrayList<Integer> mSelectedItems;
@@ -49,6 +50,7 @@ public class MainActivity extends  ActionBarActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		mWordDS = new WordDataSource(this);
 		PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 		mListview = (ListView) findViewById(R.id.lv_wordlist);
 		registerForContextMenu(mListview);
@@ -99,6 +101,13 @@ public class MainActivity extends  ActionBarActivity {
 		  savedInstanceState.putIntegerArrayList("mSelectedItems", mSelectedItems);
 		  savedInstanceState.putIntArray("mSelectedSortingCondition", mSelectedSortingCondition);
 		}
+	
+	@Override
+	public void onPause(){
+		mWordDS.close();
+		super.onPause();
+	}
+	
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -158,9 +167,7 @@ public class MainActivity extends  ActionBarActivity {
 	}
 	
 	public void delete(int wordId){
-		
-		WordDataSource wordds = new WordDataSource(this);
-		wordds.delete(String.valueOf(wordId));
+		mWordDS.delete(String.valueOf(wordId));
 	}
 	
 	public void showDeleteAlerDialog(Context context, int wordId){
@@ -250,8 +257,7 @@ public class MainActivity extends  ActionBarActivity {
 	}
 	
 	private Cursor loadWordList(){
-		WordDataSource wordds = new WordDataSource(this);
-		Cursor cursor = wordds.getAll();
+		Cursor cursor = mWordDS.getAll();
 		return cursor;
 	}
 	
@@ -304,8 +310,7 @@ public class MainActivity extends  ActionBarActivity {
 			arrSelectedTypes[i] = arrTypes[j];// get the string value of the selected items
 											  // mSelectedItems contains position of selected items in R.array.spinner_type
 		}
-		WordDataSource wordds = new WordDataSource(this);
-		Cursor cur = wordds.selectByTypes(arrSelectedTypes);
+		Cursor cur = mWordDS.selectByTypes(arrSelectedTypes);
 		return cur;
 	}
 	

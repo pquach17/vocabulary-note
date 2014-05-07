@@ -16,6 +16,10 @@ public class WordDataSource {
 		mDbHelper = new DatabaseHelper(context);
 	}
 	
+	public void close(){
+		mSQLiteDb.close();
+		mDbHelper.close();
+	}
 	public long insert(Word word){
 		mSQLiteDb = mDbHelper.getWritableDatabase();
 		ContentValues values = new ContentValues();
@@ -50,7 +54,6 @@ public class WordDataSource {
 	public Cursor getAll(){
 		mSQLiteDb = mDbHelper.getReadableDatabase();
 		Cursor cur = mSQLiteDb.rawQuery("SELECT id as _id, * FROM " + VobNoteContract.Word.TABLE_NAME,new String [] {});
-		//mSQLiteDb.close();
 		return cur;
 	}
 	
@@ -58,7 +61,6 @@ public class WordDataSource {
 		mSQLiteDb = mDbHelper.getReadableDatabase();
 		String queryString = "SELECT id as _id, * FROM " + VobNoteContract.Word.TABLE_NAME + " ORDER BY " + VobNoteContract.Word.COLUMN_NAME_WORD + " " + direction ;
 		Cursor cur = mSQLiteDb.rawQuery(queryString,new String [] {});
-	//	mSQLiteDb.close();
 		return cur;
 	}
 	
@@ -113,4 +115,6 @@ public class WordDataSource {
 		}
 		return arrWords;
 	}
+	
+	
 }

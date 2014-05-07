@@ -35,13 +35,13 @@ public class EditDetailActivity extends ActionBarActivity{
 	Spinner spinner ;
 	ImageButton btn_web;
 	Word word = new Word();
-	WordDataSource wordds = new WordDataSource(this);
+	private WordDataSource mWordds; 
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.new_word);
-		
+
 		//-------Get reference to activity's controls----------------------------
 		edit_word = (EditText) findViewById(R.id.et_word);
 		edit_definition = (EditText) findViewById(R.id.et_definition);
@@ -62,8 +62,8 @@ public class EditDetailActivity extends ActionBarActivity{
 		// ----------Bind data to controls-----------------------
 		mId = getIntent().getLongExtra("id", -1);
 		word = new Word();
-		wordds = new WordDataSource(this);
-		word = wordds.getWord((int)mId);
+		mWordds = new WordDataSource(this);
+		word = mWordds.getWord((int)mId);
 		if(mId != -1 && word != null){
 			edit_word.setText(word.getWord());
 			edit_definition.setText(word.getDefinition());
@@ -118,6 +118,11 @@ public class EditDetailActivity extends ActionBarActivity{
 		
 	}
 	
+	@Override
+	public void onPause(){
+		mWordds.close();
+		super.onPause();
+	}
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.

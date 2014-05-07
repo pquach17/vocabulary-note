@@ -68,8 +68,8 @@ public class WordDetailActivity extends ActionBarActivity{
 		else{
 			Toast t = Toast.makeText(this, "No detail available", Toast.LENGTH_LONG);
 			t.show();
-			return;
 		}
+		wordds.close();
 	}
 	
 
@@ -104,6 +104,7 @@ public class WordDetailActivity extends ActionBarActivity{
 		
 		WordDataSource wordds = new WordDataSource(this);
 		wordds.delete(String.valueOf(wordId));
+		wordds.close();
 	}
 	
 	public void showDeleteAlerDialog(Context context){

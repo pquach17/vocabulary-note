@@ -143,8 +143,10 @@ public class NewWordActivity extends ActionBarActivity{
 		word.setDefinition(edit_definition.getText().toString());
 		word.setExample(edit_example.getText().toString());
 		WordDataSource wordds = new WordDataSource(this);
-		if(wordds.insert(word)<1)// if not insert successfully, return false 
+		if(wordds.insert(word)<1){
+			// if not insert successfully, return false
 			return false;
+		}
 		return true;
 	}
 	
