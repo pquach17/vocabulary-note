@@ -2,9 +2,13 @@ package com.pquach.vocabularynote;
 
 
 
+import java.util.Locale;
+
 import com.pquach.vocabularynote.R;
 
 import android.app.AlertDialog;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.TextToSpeech.OnInitListener;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.content.Context;
@@ -15,6 +19,9 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,15 +34,24 @@ public class WordDetailActivity extends ActionBarActivity{
 	TextView tv_example  ;
 	TextView label_definition;
 	TextView label_example;
+	ImageView btn_pronounce;
+	private TextToSpeech mTts; 
+	private static final  int MY_DATA_CHECK_CODE = 1;
+	private static boolean MISSING_LANGUAGE = false;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_word_detail);
 		
 		setVolumeControlStream(AudioManager.STREAM_MUSIC);
+		//
+		//------Check Text-To-Speech engine availability
+		checkTTtsAvailability();
+		
 		// -----Enable navigation arrow on action bar-----
-			ActionBar actionBar = getSupportActionBar();
-			actionBar.setDisplayHomeAsUpEnabled(true);
+		ActionBar actionBar = getSupportActionBar();
+		actionBar.setDisplayHomeAsUpEnabled(true);
 			
 		//------Get word id from previous activity-----------
 		mId = getIntent().getLongExtra("id", -1); // id = -1 if there is no value passed to id from previous activity
@@ -64,15 +80,32 @@ public class WordDetailActivity extends ActionBarActivity{
 				label_definition.setVisibility(View.VISIBLE);
 			if(word.getExample().length() > 0)
 				label_example.setVisibility(View.VISIBLE);
+			
+			//-------Handle pronounce button-----------
+			btn_pronounce = (ImageButton) findViewById(R.id.btn_pronounce);
+			btn_pronounce.setOnClickListener(new OnClickListener() {
+				
+				@Override
+				public void onClick(View v) {
+					// TODO Auto-generated method stub
+					//------Check Text-To-Speech engine availability
+					pronounce(tv_word.getText().toString());
+				}
+			});
 		}
 		else{
-			Toast t = Toast.makeText(this, "No detail available", Toast.LENGTH_LONG);
-			t.show();
+			Toast.makeText(this, "No detail available", Toast.LENGTH_LONG)
+			     .show();
 		}
 		wordds.close();
 	}
 	
-
+	@Override
+	public void onDestroy(){
+		super.onDestroy();
+		mTts.shutdown();
+	}
+	
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -133,5 +166,67 @@ public class WordDetailActivity extends ActionBarActivity{
 		dlg.setButton(DialogInterface.BUTTON_POSITIVE, "Yes", dialogOnClickListener );
 		dlg.setButton(DialogInterface.BUTTON_NEGATIVE, "No", dialogOnClickListener);
 		dlg.show();
+	}
+	
+	/**
+	 * check if Text-To-Speech engine is installed on current device
+	 */
+	public void checkTTtsAvailability(){
+		Intent checkIntent = new Intent();
+		checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
+		startActivityForResult(checkIntent, MY_DATA_CHECK_CODE);
+	}
+	
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+	//	super.onActivityResult(requestCode, resultCode, data);
+		int i=0;
+	    if (requestCode == MY_DATA_CHECK_CODE) {
+	        if (resultCode == TextToSpeech.Engine.CHECK_VOICE_DATA_PASS) {
+	            // success, create the TTS instance
+	            mTts = new TextToSpeech(this, new OnInitListener() {
+					@Override
+					public void onInit(int status) {
+						// TODO Auto-generated method stub
+						Locale defaultLocale = Locale.getDefault();
+						Locale locale = Locale.US;
+						if(defaultLocale == Locale.CANADA){
+							locale = Locale.CANADA;
+						}
+						if(defaultLocale == Locale.UK){
+							locale = Locale.UK;
+						}
+						// isLanguageAvailable(locale)>0 means this language is available
+						if(mTts.isLanguageAvailable(locale)>0){
+							mTts.setLanguage(locale);
+							mTts.setSpeechRate((float) 0.7);
+						}else{
+							MISSING_LANGUAGE = true;
+						}
+					}
+				});
+	        } else {
+	            // missing data, install it
+	            Intent installIntent = new Intent();
+	            installIntent.setAction(
+	                TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+	            startActivity(installIntent);
+	        }
+	    }
+	}
+	
+	/**
+	 * pronounce word
+	 */
+	protected void pronounce(String word){
+		
+		//checkTTtsAvailability();// check if Text-To-Speech engine is available
+		int i=0;
+		if(!MISSING_LANGUAGE){
+			mTts.speak(word, TextToSpeech.QUEUE_FLUSH, null);
+		}else{
+			Toast.makeText(getApplicationContext(), "The language is not supported", Toast.LENGTH_LONG)
+		     .show();
+		}
 	}
 }
