@@ -4,24 +4,35 @@ package com.pquach.vocabularynote;
 
 import java.util.Locale;
 
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+
 import com.pquach.vocabularynote.R;
 
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.TextToSpeech.OnInitListener;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioManager;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,9 +46,15 @@ public class WordDetailActivity extends ActionBarActivity{
 	TextView label_definition;
 	TextView label_example;
 	ImageView btn_pronounce;
-	private TextToSpeech mTts; 
-	private static final  int MY_DATA_CHECK_CODE = 1;
+	private TextToSpeech mTts;
+	private ProgressDialog dialog;
+	//private Word word;
+	private WordDataSource wordds;
+	private static boolean MISSING_TTS = false;
 	private static boolean MISSING_LANGUAGE = false;
+	private static boolean TTS_READY = false;
+	final String ttsPackageName = "com.google.android.tts";
+	final String picoPackageName = "com.svox.pico";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +64,7 @@ public class WordDetailActivity extends ActionBarActivity{
 		setVolumeControlStream(AudioManager.STREAM_MUSIC);
 		//
 		//------Check Text-To-Speech engine availability
-		checkTTtsAvailability();
+		checkTtsAvailability();
 		
 		// -----Enable navigation arrow on action bar-----
 		ActionBar actionBar = getSupportActionBar();
@@ -58,8 +75,9 @@ public class WordDetailActivity extends ActionBarActivity{
 		
 		//-------Bind data to controls------------
 		Word word = new Word();
-		WordDataSource wordds = new WordDataSource(this);
+		wordds = new WordDataSource(WordDetailActivity.this);
 		word = wordds.getWord((int)mId);
+	
 		if(mId != -1 && word != null){
 			// Get controls' reference
 			tv_word = (TextView) findViewById(R.id.tv_word);
@@ -68,42 +86,45 @@ public class WordDetailActivity extends ActionBarActivity{
 			tv_example = (TextView) findViewById(R.id.tv_example);
 			label_definition = (TextView) findViewById(R.id.label_definition);
 			label_example = (TextView) findViewById(R.id.label_example);
-			
-		   // Bind data into UI
+				
+			// Bind data into UI
 			tv_word.setText(word.getWord());
 			tv_word_type.setText(word.getType());
 			tv_definition.setText(word.getDefinition());
 			tv_example.setText(word.getExample());
-			
+				
 			// set labels' visibility
 			if(word.getDefinition().length() > 0)
 				label_definition.setVisibility(View.VISIBLE);
 			if(word.getExample().length() > 0)
 				label_example.setVisibility(View.VISIBLE);
-			
 			//-------Handle pronounce button-----------
 			btn_pronounce = (ImageButton) findViewById(R.id.btn_pronounce);
-			btn_pronounce.setOnClickListener(new OnClickListener() {
-				
+			btn_pronounce.setOnClickListener(new OnClickListener() {	
 				@Override
 				public void onClick(View v) {
 					// TODO Auto-generated method stub
-					//------Check Text-To-Speech engine availability
 					pronounce(tv_word.getText().toString());
 				}
-			});
-		}
-		else{
-			Toast.makeText(this, "No detail available", Toast.LENGTH_LONG)
-			     .show();
-		}
-		wordds.close();
+				});
+			}
+			else{
+				//Toast.makeText(, "No detail available", Toast.LENGTH_LONG)
+				  //   .show();
+			}
+			wordds.close();
 	}
 	
 	@Override
-	public void onDestroy(){
-		super.onDestroy();
-		mTts.shutdown();
+	public void onRestart(){
+		super.onRestart();
+		//checkTtsAvailability();
+	}
+	@Override
+	public void onPause(){
+		if(mTts!=null)
+			mTts.shutdown();
+		super.onPause();
 	}
 	
 	
@@ -168,65 +189,73 @@ public class WordDetailActivity extends ActionBarActivity{
 		dlg.show();
 	}
 	
+	private void initializeTTS(){ 
+			mTts = new TextToSpeech(WordDetailActivity.this, new OnInitListener() {
+			@Override
+			public void onInit(int status) {
+				// TODO Auto-generated method stub
+				Locale defaultLocale = Locale.getDefault();
+				Locale locale = Locale.US;
+				if(defaultLocale == Locale.CANADA){
+					locale = Locale.CANADA;
+				}
+				if(defaultLocale == Locale.UK){
+					locale = Locale.UK;
+				}
+				// isLanguageAvailable(locale)>0 means this language is available
+				if(mTts.isLanguageAvailable(locale)>0){
+					mTts.setLanguage(locale);
+					mTts.setSpeechRate((float) 0.8);
+					TTS_READY = true;
+					MISSING_LANGUAGE = false;
+				}else{
+					MISSING_LANGUAGE = true;
+				}
+			}
+		});
+	}
 	/**
 	 * check if Text-To-Speech engine is installed on current device
 	 */
-	public void checkTTtsAvailability(){
-		Intent checkIntent = new Intent();
-		checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
-		startActivityForResult(checkIntent, MY_DATA_CHECK_CODE);
+	private void checkTtsAvailability(){
+		if(isPackageInstalled(getPackageManager(), ttsPackageName) 
+				|| isPackageInstalled(getPackageManager(), picoPackageName)){
+			MISSING_TTS = false;
+			initializeTTS();	
+		}else{
+			MISSING_TTS = true;
+		}
 	}
 	
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-	//	super.onActivityResult(requestCode, resultCode, data);
-		int i=0;
-	    if (requestCode == MY_DATA_CHECK_CODE) {
-	        if (resultCode == TextToSpeech.Engine.CHECK_VOICE_DATA_PASS) {
-	            // success, create the TTS instance
-	            mTts = new TextToSpeech(this, new OnInitListener() {
-					@Override
-					public void onInit(int status) {
-						// TODO Auto-generated method stub
-						Locale defaultLocale = Locale.getDefault();
-						Locale locale = Locale.US;
-						if(defaultLocale == Locale.CANADA){
-							locale = Locale.CANADA;
-						}
-						if(defaultLocale == Locale.UK){
-							locale = Locale.UK;
-						}
-						// isLanguageAvailable(locale)>0 means this language is available
-						if(mTts.isLanguageAvailable(locale)>0){
-							mTts.setLanguage(locale);
-							mTts.setSpeechRate((float) 0.7);
-						}else{
-							MISSING_LANGUAGE = true;
-						}
-					}
-				});
-	        } else {
-	            // missing data, install it
-	            Intent installIntent = new Intent();
-	            installIntent.setAction(
-	                TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
-	            startActivity(installIntent);
-	        }
-	    }
-	}
-	
+	private boolean isPackageInstalled(PackageManager pm, String packageName) {
+        try {
+            pm.getPackageInfo(packageName, 0);
+        } catch (NameNotFoundException e) {
+            return false;
+        }
+        return true;
+}
 	/**
 	 * pronounce word
 	 */
 	protected void pronounce(String word){
-		
-		//checkTTtsAvailability();// check if Text-To-Speech engine is available
-		int i=0;
-		if(!MISSING_LANGUAGE){
+		if(MISSING_TTS){
+			try {
+			    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + ttsPackageName)));
+			} catch (android.content.ActivityNotFoundException anfe) {
+			    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://play.google.com/store/apps/details?id=" + ttsPackageName)));
+			}
+			return;
+		}
+		if(MISSING_LANGUAGE){
+			// missing data, install it
+			Intent installIntent = new Intent();
+			installIntent.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+			startActivity(installIntent);
+			return;
+		}
+		if(TTS_READY){
 			mTts.speak(word, TextToSpeech.QUEUE_FLUSH, null);
-		}else{
-			Toast.makeText(getApplicationContext(), "The language is not supported", Toast.LENGTH_LONG)
-		     .show();
 		}
 	}
 }

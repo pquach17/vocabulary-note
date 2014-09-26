@@ -22,7 +22,6 @@ import com.tekle.oss.android.animation.AnimationFactory;
 import com.tekle.oss.android.animation.AnimationFactory.FlipDirection;
 
 
-
 public class FlashCardActivity extends ActionBarActivity implements AnimationListener{
 
 	ViewAnimator mViewAnimator;
@@ -188,19 +187,6 @@ public class FlashCardActivity extends ActionBarActivity implements AnimationLis
 	public void onAnimationEnd(Animation animation) {
 		// TODO Auto-generated method stub
 		
-			/*
-			mButtonStartOver = (ImageButton) findViewById(R.id.button_refresh);
-			mButtonStartOver.setVisibility(View.VISIBLE);
-			mButtonStartOver.setOnClickListener(new OnClickListener() {
-				
-				@Override
-				public void onClick(View v) {
-					// TODO Auto-generated method stub
-					InitializeArrays();
-					mButtonStartOver.setVisibility(View.INVISIBLE);
-					mTextViewWord.setVisibility(View.INVISIBLE);
-				}
-			});*/
 		if(mWordArray.isEmpty()){
 			mIsOver = true;
 			mTextViewWord.setClickable(true);

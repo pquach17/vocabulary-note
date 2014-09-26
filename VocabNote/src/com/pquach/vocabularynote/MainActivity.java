@@ -1,5 +1,9 @@
 package com.pquach.vocabularynote;
 
+import com.parse.Parse;
+import com.parse.ParseAnalytics;
+import com.parse.ParseObject;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import com.pquach.vocabularynote.R;
@@ -55,7 +59,7 @@ public class MainActivity extends  ActionBarActivity {
 		mListview = (ListView) findViewById(R.id.lv_wordlist);
 		registerForContextMenu(mListview);
 		Cursor cur;
-		
+	
 		//---Restore saved instance state-----
 		if(savedInstanceState != null){
 			mSelectedItems = savedInstanceState.getIntegerArrayList("mSelectedItems");
